@@ -1,0 +1,13 @@
+Analyse du binaire level00 :
+
+1. Désassemblage/Décompilation du binaire.
+2. On remarque un appel à scanf qui attend un entier.
+3. Cet entier est comparé immédiatement après à la valeur hexadécimale 0x149c.
+4. Conversion : 0x149c = 5276 en décimal.
+5. Si la comparaison est vraie, le programme lance un system("/bin/sh").
+
+Exploitation :
+- Lancer ./level00
+- Entrer 5276
+- Une fois dans le shell, récupérer le pass du level01.
+- cat /home/users/level01/.pass

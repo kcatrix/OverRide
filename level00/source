@@ -1,0 +1,26 @@
+#include <stdlib.h>
+#include <stdio.h>
+
+int main(void)
+{
+    int input;
+
+    puts("***********************************");
+    puts("* \t     -Level00 -\t\t  *");
+    puts("***********************************");
+    printf("Password:");
+
+    // Lecture d'un entier (%d) dans la variable input
+    scanf("%d", &input);
+
+    // 0x149c en hexadécimal équivaut à 5276 en décimal
+    if (input != 5276) {
+        puts("\nInvalid Password!");
+        return (1);
+    } else {
+        puts("\nAuthenticated!");
+        // Ouvre un shell avec les droits du propriétaire du fichier (level01)
+        system("/bin/sh");
+        return (0);
+    }
+}
