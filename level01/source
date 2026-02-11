@@ -1,0 +1,57 @@
+#include <stdio.h>
+#include <string.h>
+
+// Variable globale (stockée dans la section .bss ou .data)
+char a_user_name[256];
+
+int verify_user_name(void)
+{
+    // Compare le nom d'utilisateur avec "dat_wil" (7 caractères)
+    // La boucle étrange dans ta décompilation est l'implémentation bas niveau de strncmp
+    return strncmp(a_user_name, "dat_wil", 7);
+}
+
+int verify_user_pass(char *pass)
+{
+    // Compare le mot de passe avec "admin" (5 caractères)
+    return strncmp(pass, "admin", 5);
+}
+
+int main(void)
+{
+    // Le buffer fait 64 bytes (0x40)
+    char buffer[64];
+    int result;
+
+    // Initialisation du buffer à 0 (équivalent à la boucle for du code décompilé)
+    memset(buffer, 0, 64);
+
+    puts("********* ADMIN LOGIN PROMPT *********");
+    printf("Enter Username: ");
+
+    // Lecture sécurisée pour le username (256 bytes dans un buffer de 256)
+    fgets(a_user_name, 256, stdin);
+
+    // Vérification du username
+    if (verify_user_name() != 0) {
+        puts("nope, incorrect username...\n");
+        return (1);
+    }
+
+    puts("Enter Password: ");
+
+    // FAILLE DE SÉCURITÉ ICI :
+    // On lit 100 caractères dans un buffer qui ne fait que 64 octets.
+    fgets(buffer, 100, stdin);
+
+    // Vérification du mot de passe
+    result = verify_user_pass(buffer);
+
+    if (result == 0) {
+        // Si le mot de passe est "admin" (mais ce n'est pas le but de l'exercice)
+        return (0);
+    } else {
+        puts("nope, incorrect password...\n");
+        return (1);
+    }
+}

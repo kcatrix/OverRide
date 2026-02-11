@@ -1,0 +1,67 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
+#include <stdbool.h>
+
+// Cette fonction déchiffre une chaîne cachée et vérifie si elle 
+// devient "Congratulations!"
+void decrypt(int key) {
+    // Les 17 octets trouvés dans le binaire (local_21)
+    unsigned char hidden_str[] = {
+        0x51, 0x7d, 0x7c, 0x75, 0x60, 0x73, 0x66, 0x67, 
+        0x7e, 0x73, 0x66, 0x7b, 0x7d, 0x7c, 0x61, 0x33, 0x00
+    };
+    
+    int len = strlen((char *)hidden_str);
+    
+    // 1. Opération XOR sur chaque caractère avec la clé fournie
+    for (int i = 0; i < len; i++) {
+        hidden_str[i] = hidden_str[i] ^ (unsigned char)key;
+    }
+    
+    // 2. Vérification du résultat
+    // Si la clé est 18 (0x12), hidden_str devient "Congratulations!"
+    if (strcmp((char *)hidden_str, "Congratulations!") == 0) {
+        system("/bin/sh");
+    } else {
+        puts("\nInvalid Password");
+    }
+}
+
+void test(int user_input, int magic_constant) {
+    // Le calcul de la clé est la différence entre la constante et l'input
+    int key = magic_constant - user_input;
+
+    // Le switch de Ghidra vérifie si la clé est entre 1 et 21 (0x15)
+    if (key >= 1 && key <= 21) {
+        decrypt(key);
+    } else {
+        // Si le nombre n'est pas dans l'intervalle, on prend une clé au hasard
+        // (presque impossible de gagner ici)
+        decrypt(rand());
+    }
+}
+
+int main(void) {
+    int user_input;
+
+    // Initialisation du générateur aléatoire
+    srand(time(NULL));
+
+    puts("***********************************");
+    puts("*\t\tlevel03\t\t**");
+    puts("***********************************");
+    
+    printf("Password:");
+    
+    // Lecture de l'input utilisateur (le nombre entier)
+    if (scanf("%d", &user_input) != 1) {
+        return 1;
+    }
+
+    // Dans le binaire réel, la constante magique est 322424845
+    test(user_input, 322424845);
+
+    return 0;
+}
