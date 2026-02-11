@@ -1,0 +1,58 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/ptrace.h>
+#include <sys/wait.h>
+#include <sys/prctl.h>
+#include <sys/types.h>
+#include <signal.h>
+
+int main(void) {
+    pid_t child_pid;
+    char buffer[128];
+    long syscall_num = 0;
+    int status = 0;
+
+    child_pid = fork();
+
+    // On initialise le buffer à zéro (la boucle for bizarre dans Ghidra)
+    memset(buffer, 0, 128);
+
+    if (child_pid == 0) {
+        // --- CODE DU FILS ---
+        // Si le parent meurt, le fils meurt aussi
+        prctl(PR_SET_PDEATHSIG, SIGHUP);
+        // Le fils autorise le parent à le "tracer" (ptrace)
+        ptrace(PTRACE_TRACEME, 0, 0, 0);
+        
+        puts("Give me some shellcode, k");
+        
+        // LA FAILLE : Buffer Overflow ici (gets ne limite pas la taille)
+        gets(buffer); 
+    } 
+    else {
+        // --- CODE DU PARENT ---
+        do {
+            // Attend que le fils change d'état (signal, syscall, etc.)
+            wait(&status);
+            
+            // Vérifie si le fils s'est arrêté normalement
+            if (WIFEXITED(status) || WIFSIGNALED(status)) {
+                puts("child is exiting...");
+                return 0;
+            }
+
+            // EXPLICATION : Le parent regarde quel appel système (syscall) le fils fait.
+            // 0x2c (44 en décimal) est l'offset pour ORIG_EAX sur un système x86.
+            // ORIG_EAX contient le numéro de l'appel système.
+            syscall_num = ptrace(PTRACE_PEEKUSER, child_pid, 44, 0);
+
+        } while (syscall_num != 11); // 11 (0xb) est le syscall pour execve()
+
+        // Si le fils essaie de lancer un programme (execve), le parent intervient !
+        puts("no exec() for you");
+        kill(child_pid, SIGKILL);
+    }
+
+    return 0;
+}
