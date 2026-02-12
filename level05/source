@@ -1,0 +1,39 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+int main(void) {
+    char buffer[100];     // Correspond à local_78
+    unsigned int i = 0;   // Correspond à local_14
+
+    // 1. Lecture de l'entrée standard (stdin)
+    fgets(buffer, 100, stdin);
+
+    while (1) {
+        // La boucle complexe "uVar2..." dans le code original est 
+        // une version bas niveau optimisée de strlen().
+        
+        // Si l'index 'i' a atteint la fin de la chaîne :
+        if (i >= strlen(buffer)) {
+            // Affiche le buffer et quitte.
+            // ATTENTION : C'est ici que se trouve la faille (Format String).
+            // Le code fait printf(buffer) au lieu de printf("%s", buffer).
+            printf(buffer); 
+            exit(0);
+        }
+
+        // 2. Traitement des caractères
+        // Vérifie si le caractère est une majuscule (entre '@' et '[')
+        // '@' = 64 (juste avant 'A') et '[' = 91 (juste après 'Z')
+        if (buffer[i] > '@' && buffer[i] < '[') {
+            // Conversion en minuscule via un XOR 0x20
+            // Exemple : 'A' (0x41) ^ 0x20 = 'a' (0x61)
+            buffer[i] = buffer[i] ^ 0x20;
+        }
+
+        // 3. Passage au caractère suivant
+        i++;
+    }
+    
+    return 0;
+}
