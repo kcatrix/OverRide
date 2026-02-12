@@ -1,0 +1,84 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <stdio.h>
+#include <string.h>
+#include <sys/ptrace.h>
+
+int auth(char *login, unsigned int serial) {
+    size_t len;
+    int i;
+    unsigned int calculated_hash;
+
+    // 1. Suppression du caractère 'newline' (\n)
+    login[strcspn(login, "\n")] = '\0';
+
+    // 2. Vérification de la longueur (minimum 6 caractères)
+    len = strnlen(login, 32);
+    if ((int)len < 6) {
+        return 1;
+    }
+
+    // 3. Protection Anti-Debug (PTRACE_TRACEME)
+    // Si un debugger (comme GDB) est attaché, ptrace retourne -1.
+    if (ptrace(PTRACE_TRACEME, 0, 1, 0) == -1) {
+        puts("\x1b[32m.---------------------------.");
+        puts("\x1b[31m| !! TAMPERING DETECTED !!  |");
+        puts("\x1b[32m'---------------------------'");
+        return 1;
+    }
+
+    // 4. Initialisation de l'algorithme de hashage
+    // Utilise le 4ème caractère du login (index 3)
+    calculated_hash = ((int)login[3] ^ 0x1337) + 0x5eeded;
+
+    // 5. Boucle de génération du serial
+    for (i = 0; i < (int)len; i++) {
+        // Si le caractère est un code de contrôle (ASCII < 32), on échoue
+        if (login[i] < ' ') {
+            return 1;
+        }
+        // Opération mathématique de base
+        calculated_hash += ((int)login[i] ^ calculated_hash) % 0x539;
+    }
+
+    // 6. Comparaison finale
+    if (serial == calculated_hash) {
+        return 0; // Succès !
+    } else {
+        return 1; // Échec
+    }
+}
+
+int main(void) {
+    char login[32];
+    unsigned int serial;
+
+    puts("***********************************");
+    puts("*\t\tlevel06\t\t  *");
+    puts("***********************************");
+    
+    // Lecture du login
+    printf("-> Enter Login: ");
+    fgets(login, 32, stdin);
+
+    puts("***********************************");
+    puts("***** NEW ACCOUNT DETECTED ********");
+    puts("***********************************");
+
+    // Lecture du serial
+    printf("-> Enter Serial: ");
+    // Note: __isoc99_scanf dans ton code attend un %u (unsigned int)
+    if (scanf("%u", &serial) != 1) {
+        return 1;
+    }
+
+    // Vérification via la fonction auth
+    if (auth(login, serial) == 0) {
+        puts("Authenticated!");
+        system("/bin/sh");
+    }
+
+    return 0;
+}

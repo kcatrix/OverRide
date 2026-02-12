@@ -1,0 +1,128 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+
+/* --- Prototypes --- */
+void clear_stdin(void);
+unsigned int get_unum(void);
+int read_number(unsigned int *data);
+int store_number(unsigned int *data);
+
+/* --- Fonctions Utilitaires --- */
+
+// Vide le tampon d'entrée standard pour éviter les résidus de saisie
+void clear_stdin(void) {
+    int c;
+    do {
+        c = getchar();
+    } while (c != '\n' && c != -1);
+}
+
+// Récupère un entier non signé via scanf
+unsigned int get_unum(void) {
+    unsigned int input = 0;
+    fflush(stdout);
+    if (scanf("%u", &input) != 1) {
+        // Gestion d'erreur rudimentaire
+    }
+    clear_stdin();
+    return input;
+}
+
+/* --- Logique Métier --- */
+
+// Permet de lire un nombre à un index arbitraire (Faille OOB Read)
+int read_number(unsigned int *data) {
+    unsigned int index;
+
+    printf(" Index: ");
+    index = get_unum();
+
+    printf(" Number at data[%u] is %u\n", index, data[index]);
+    return 0;
+}
+
+// Permet de stocker un nombre (Faille OOB Write avec restrictions)
+int store_number(unsigned int *data) {
+    unsigned int number;
+    unsigned int index;
+
+    printf(" Number: ");
+    number = get_unum();
+    printf(" Index: ");
+    index = get_unum();
+
+    // Restrictions de "Wil" :
+    // 1. L'index ne doit pas être un multiple de 3
+    // 2. Le nombre ne doit pas commencer par 0xb7 (protection Libc)
+    if ((index % 3 == 0) || (number >> 24 == 0xb7)) {
+        puts(" *** ERROR! ***");
+        puts("    This index is reserved for wil!");
+        puts(" *** ERROR! ***");
+        return 1;
+    }
+
+    data[index] = number;
+    return 0;
+}
+
+/* --- Point d'entrée --- */
+
+int main(int argc, char **argv, char **envp) {
+    char command[20];
+    unsigned int data[100]; // Stockage de 100 entiers (400 octets)
+    int status = 0;
+
+    // Initialisation du stockage
+    memset(data, 0, sizeof(data));
+
+    // Sécurité Anti-Forensics : Effacement des arguments et de l'environnement
+    for (char **arg = argv; *arg != NULL; arg++) {
+        memset(*arg, 0, strlen(*arg));
+    }
+    for (char **env = envp; *env != NULL; env++) {
+        memset(*env, 0, strlen(*env));
+    }
+
+    puts("----------------------------------------------------");
+    puts("  Welcome to wil's crappy number storage service!   ");
+    puts("----------------------------------------------------");
+    puts(" Commands:                                          ");
+    puts("    store - store a number into the data storage    ");
+    puts("    read  - read a number from the data storage     ");
+    puts("    quit  - exit the program                        ");
+    puts("----------------------------------------------------");
+    puts("    wil has reserved some storage :>                ");
+    puts("----------------------------------------------------");
+
+    while (true) {
+        printf("Input command: ");
+        status = 1;
+
+        if (fgets(command, 20, stdin) == NULL) break;
+
+        // Nettoyage du newline
+        command[strcspn(command, "\n")] = '\0';
+
+        if (strcmp(command, "store") == 0) {
+            status = store_number(data);
+        } 
+        else if (strcmp(command, "read") == 0) {
+            status = read_number(data);
+        } 
+        else if (strcmp(command, "quit") == 0) {
+            return 0;
+        }
+
+        if (status == 0) {
+            printf(" Completed %s command successfully\n", command);
+        } else {
+            printf(" Failed to do %s command\n", command);
+        }
+
+        memset(command, 0, sizeof(command));
+    }
+
+    return 0;
+}
