@@ -1,0 +1,72 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+void log_wrapper(FILE *log_file, char *prefix, char *msg) {
+    char buffer[264];
+
+    strcpy(buffer, prefix);
+    // VULNÉRABILITÉ : Format String ici (param_3 est utilisé comme format)
+    // snprintf(buffer + strlen(buffer), max_len, msg);
+    snprintf(buffer + strlen(buffer), 254 - strlen(buffer), msg);
+
+    // Supprime le saut de ligne s'il existe
+    buffer[strcspn(buffer, "\n")] = '\0';
+
+    fprintf(log_file, "LOG: %s\n", buffer);
+}
+
+int main(int argc, char **argv) {
+    FILE *log_fp;
+    FILE *source_fp;
+    int backup_fd;
+    int char_read;
+    char backup_path[104];
+    char c;
+
+    if (argc != 2) {
+        printf("Usage: %s filename\n", argv[0]);
+    }
+
+    // Ouvre le fichier de log en mode append (ou write ici)
+    log_fp = fopen("./backups/.log", "w");
+    if (log_fp == NULL) {
+        printf("ERROR: Failed to open %s\n", "./backups/.log");
+        exit(1);
+    }
+
+    log_wrapper(log_fp, "Starting back up: ", argv[1]);
+
+    // Ouvre le fichier source passé en argument
+    source_fp = fopen(argv[1], "r");
+    if (source_fp == NULL) {
+        printf("ERROR: Failed to open %s\n", argv[1]);
+        exit(1);
+    }
+
+    // Prépare le chemin de destination : "./backups/" + argv[1]
+    strncpy(backup_path, "./backups/", 11);
+    strncat(backup_path, argv[1], 99 - strlen(backup_path));
+
+    // Ouvre/Crée le fichier de backup
+    backup_fd = open(backup_path, O_WRONLY | O_CREAT | O_EXCL, 0660);
+    if (backup_fd < 0) {
+        printf("ERROR: Failed to open %s%s\n", "./backups/", argv[1]);
+        exit(1);
+    }
+
+    // Copie le contenu octet par octet
+    while ((char_read = fgetc(source_fp)) != EOF) {
+        c = (char)char_read;
+        write(backup_fd, &c, 1);
+    }
+
+    log_wrapper(log_fp, "Finished back up ", argv[1]);
+
+    fclose(source_fp);
+    close(backup_fd);
+
+    return 0;
+}
