@@ -1,7 +1,3 @@
-1. Description du projet
-Ce projet consiste à exploiter des binaires de type ELF sur un système i386. L'objectif est de trouver une vulnérabilité pour lire le fichier .pass de l'utilisateur suivant.
-+2
-
 2. Analyse du binaire
 Le programme level06 demande un Login et un Serial.
 
