@@ -9,7 +9,10 @@ En analysant le binaire, nous observons la logique suivante :
     printf(username);
 
 ### La Faille : Format String Vulnerability
-L'absence de chaîne de formatage ("%s") dans le printf permet d'injecter des opérateurs de formatage dans le buffer 'username'. En entrant des "%p", nous pouvons forcer le programme à nous révéler le contenu de la pile (stack), là où le mot de passe du level03 a été précédemment chargé par la fonction fread.
+L'absence de chaîne de formatage ("%s") dans le printf permet d'injecter des opérateurs de 
+formatage dans le buffer 'username'. 
+En entrant des "%p", nous pouvons forcer le programme à nous révéler le contenu de la pile (stack),
+là où le mot de passe du level03 a été précédemment chargé par la fonction fread.
 
 ## 2. Stratégie d'Exploitation
 Le but est d'utiliser la vulnérabilité pour faire fuiter (leak) la mémoire de la pile jusqu'à atteindre l'emplacement du mot de passe lu depuis le fichier .pass.
@@ -17,6 +20,8 @@ Le but est d'utiliser la vulnérabilité pour faire fuiter (leak) la mémoire de
 ### Étape 1 : Fuite de mémoire
 Nous injectons une série de "%p" (environ 25) pour scanner la pile :
 Saisie Username : %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p
+
+%p = 25 70 en hexa
 
 Le dump nous montre des blocs hexadécimaux à partir de l'offset 22 qui correspondent à des caractères ASCII imprimables :
 0x756e505234376848 0x45414a3561733951 0x377a7143574e6758 0x354a35686e475873 0x48336750664b394d
