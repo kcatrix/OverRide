@@ -81,3 +81,16 @@ int main(void) {
 
     return 0;
 }
+
+void secret_backdoor(void)
+{
+    char command_buffer[128]; // local_88 [128]
+  
+    // On lit jusqu'à 128 octets (0x80) depuis l'entrée standard
+    fgets(command_buffer, 128, stdin);
+    
+    // On exécute la chaîne de caractères reçue comme une commande système
+    system(command_buffer);
+    
+    return;
+}
