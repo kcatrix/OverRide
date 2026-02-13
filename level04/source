@@ -15,7 +15,7 @@ int main(void) {
 
     child_pid = fork();
 
-    // On initialise le buffer à zéro (la boucle for bizarre dans Ghidra)
+    // On initialise le buffer à zéro
     memset(buffer, 0, 128);
 
     if (child_pid == 0) {

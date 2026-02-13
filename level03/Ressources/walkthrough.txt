@@ -1,20 +1,25 @@
 # Analyse du binaire level03
 
 ## 1. Analyse Statique (Reverse Engineering)
-En décompilant le binaire avec Ghidra, nous identifions une structure logique basée sur la manipulation d'un entier fourni par l'utilisateur.
+En décompilant le binaire avec Ghidra, 
+nous identifions une structure logique basée sur la manipulation d'un entier fourni par l'utilisateur.
 
 - main : Initialise un générateur aléatoire (srand), demande un entier (Password) et appelle la fonction test().
 - test(input, constant) : Calcule une clé via la soustraction : key = constant - input. 
   La constante magique trouvée dans l'assembleur est 0x13371337 (soit 322424845 en décimal).
-- decrypt(key) : Effectue un XOR entre la clé fournie et une chaîne de caractères "obscurcie" stockée en dur dans le binaire.
+- decrypt(key) : Effectue un XOR entre la clé fournie et une chaîne de caractères "obscurcie" 
+  stockée en dur dans le binaire.
 
 ## 2. Identification de la vulnérabilité
-Le programme n'exploite pas de débordement de mémoire, mais repose sur une faille de logique cryptographique. La fonction decrypt() compare le résultat de son opération XOR avec la chaîne "Congratulations!". Si les chaînes correspondent, elle exécute system("/bin/sh").
-
-
+Le programme n'exploite pas de débordement de mémoire, 
+mais repose sur une faille de logique cryptographique. 
+La fonction decrypt() compare le résultat de son opération XOR avec la chaîne "Congratulations!". 
+Si les chaînes correspondent, elle exécute system("/bin/sh").
 
 ## 3. Calcul de la clé (XOR Reverse)
-L'opération XOR est symétrique. Pour trouver la clé (K), nous prenons le premier octet de la chaîne cryptée (C) et le premier octet de la cible (T = "C").
+L'opération XOR est symétrique. Pour trouver la clé (K), 
+nous prenons le premier octet de la chaîne cryptée (C) 
+et le premier octet de la cible (T = "C").
 
 Données :
 - Premier octet crypté (local_21[0]) : 0x51

